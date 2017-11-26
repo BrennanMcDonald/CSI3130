@@ -4075,7 +4075,8 @@ create_hashjoin_plan(PlannerInfo *root,
 					 HashPath *best_path)
 {
 	HashJoin   *join_plan;
-	Hash	   *hash_plan;
+	Hash	   *inner_hash_plan; //CSI3130 renamed from hash_plan
+	Hash		 *outer_hash_plan; //CSI3130 Added so outer is hashed
 	Plan	   *outer_plan;
 	Plan	   *inner_plan;
 	List	   *tlist = build_path_tlist(root, &best_path->jpath.path);
@@ -4178,10 +4179,13 @@ create_hashjoin_plan(PlannerInfo *root,
 	/*
 	 * Build the hash node and hash join node.
 	 */
-	hash_plan = make_hash(inner_plan,
+	inner_hash_plan = make_hash(inner_plan,
 						  skewTable,
 						  skewColumn,
 						  skewInherit);
+
+	outer_hash_plan = make_hash(outer_plan);
+
 
 	/*
 	 * Set Hash node's startup & total costs equal to total cost of input
@@ -4194,8 +4198,8 @@ create_hashjoin_plan(PlannerInfo *root,
 							  joinclauses,
 							  otherclauses,
 							  hashclauses,
-							  outer_plan,
-							  (Plan *) hash_plan,
+							  (Plan *) outer_hash_plan,
+							  (Plan *) inner_hash_plan,
 							  best_path->jpath.jointype,
 							  best_path->jpath.inner_unique);
 

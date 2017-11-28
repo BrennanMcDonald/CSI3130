@@ -37,7 +37,7 @@
 /* Returns true if doing null-fill on outer relation */
 #define HJ_FILL_OUTER(hjstate)	((hjstate)->hj_NullInnerTupleSlot != NULL)
 /* Returns true if doing null-fill on inner relation */
-#define HJ_FILL_INNER(hjstate)	((hjstate)->hj_NullOuterTupleSlot != NULL)
+#define HJ_FILL_INNER(hjstate)	((hjstate)->hj_NullInnerTupleSlot != NULL)
 
 static TupleTableSlot *ExecHashJoinOuterGetTuple(PlanState *outerNode,
 						  HashJoinState *hjstate,
@@ -79,7 +79,7 @@ ExecHashJoin(PlanState *pstate)
 	otherqual = node->js.ps.qual;
 	hashNode = (HashState *) innerPlanState(node);
 	outerNode = outerPlanState(node);
-	hashtable = node->hj_HashTable;
+	hashtable = node->inner_hj_HashTable;
 	econtext = node->js.ps.ps_ExprContext;
 
 	/*
@@ -160,7 +160,7 @@ ExecHashJoin(PlanState *pstate)
 				hashtable = ExecHashTableCreate((Hash *) hashNode->ps.plan,
 												node->hj_HashOperators,
 												HJ_FILL_INNER(node));
-				node->hj_HashTable = hashtable;
+				node->inner_hj_HashTable = hashtable;
 
 				/*
 				 * execute the Hash node, to build the hash table
@@ -216,18 +216,18 @@ ExecHashJoin(PlanState *pstate)
 				}
 
 				econtext->ecxt_outertuple = outerTupleSlot;
-				node->hj_MatchedOuter = false;
+				node->hj_MachedOuter = false;
 
 				/*
 				 * Find the corresponding bucket for this tuple in the main
 				 * hash table or skew hash table.
 				 */
-				node->hj_CurHashValue = hashvalue;
+				node->inner_inner_inner_hj_CurHashValue = hashvalue;
 				ExecHashGetBucketAndBatch(hashtable, hashvalue,
-										  &node->hj_CurBucketNo, &batchno);
+										  &node->outer_outer_hj_CurBucketNo, &batchno);
 				node->hj_CurSkewBucketNo = ExecHashGetSkewBucket(hashtable,
 																 hashvalue);
-				node->hj_CurTuple = NULL;
+				node->inner_hj_CurTuple = NULL;
 
 				/*
 				 * The tuple might not belong to the current batch (where
@@ -279,8 +279,8 @@ ExecHashJoin(PlanState *pstate)
 				 */
 				if (joinqual == NULL || ExecQual(joinqual, econtext))
 				{
-					node->hj_MatchedOuter = true;
-					HeapTupleHeaderSetMatch(HJTUPLE_MINTUPLE(node->hj_CurTuple));
+					node->hj_MachedOuter = true;
+					HeapTupleHeaderSetMatch(HJTUPLE_MINTUPLE(node->inner_hj_CurTuple));
 
 					/* In an antijoin, we never return a matched tuple */
 					if (node->js.jointype == JOIN_ANTI)
@@ -315,7 +315,7 @@ ExecHashJoin(PlanState *pstate)
 				 */
 				node->hj_JoinState = HJ_NEED_NEW_OUTER;
 
-				if (!node->hj_MatchedOuter &&
+				if (!node->hj_MachedOuter &&
 					HJ_FILL_OUTER(node))
 				{
 					/*
@@ -349,7 +349,7 @@ ExecHashJoin(PlanState *pstate)
 				 * Generate a fake join tuple with nulls for the outer tuple,
 				 * and return it if it passes the non-join quals.
 				 */
-				econtext->ecxt_outertuple = node->hj_NullOuterTupleSlot;
+				econtext->ecxt_outertuple = node->hj_NullInnerTupleSlot;
 
 				if (otherqual == NULL || ExecQual(otherqual, econtext))
 					return ExecProject(node->js.ps.ps_ProjInfo);
@@ -458,12 +458,12 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 									  ExecGetResultType(innerPlanState(hjstate)));
 			break;
 		case JOIN_RIGHT:
-			hjstate->hj_NullOuterTupleSlot =
+			hjstate->hj_NullInnerTupleSlot =
 				ExecInitNullTupleSlot(estate,
 									  ExecGetResultType(outerPlanState(hjstate)));
 			break;
 		case JOIN_FULL:
-			hjstate->hj_NullOuterTupleSlot =
+			hjstate->hj_NullInnerTupleSlot =
 				ExecInitNullTupleSlot(estate,
 									  ExecGetResultType(outerPlanState(hjstate)));
 			hjstate->hj_NullInnerTupleSlot =
@@ -486,7 +486,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 		HashState  *hashstate = (HashState *) innerPlanState(hjstate);
 		TupleTableSlot *slot = hashstate->ps.ps_ResultTupleSlot;
 
-		hjstate->hj_HashTupleSlot = slot;
+		hjstate->hj_OuterTupleSlot = slot;
 	}
 
 	/*
@@ -501,13 +501,13 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	/*
 	 * initialize hash-specific info
 	 */
-	hjstate->hj_HashTable = NULL;
+	hjstate->inner_hj_HashTable = NULL;
 	hjstate->hj_FirstOuterTupleSlot = NULL;
 
-	hjstate->hj_CurHashValue = 0;
-	hjstate->hj_CurBucketNo = 0;
+	hjstate->inner_inner_inner_hj_CurHashValue = 0;
+	hjstate->outer_outer_hj_CurBucketNo = 0;
 	hjstate->hj_CurSkewBucketNo = INVALID_SKEW_BUCKET_NO;
-	hjstate->hj_CurTuple = NULL;
+	hjstate->inner_hj_CurTuple = NULL;
 
 	/*
 	 * Deconstruct the hash clauses into outer and inner argument values, so
@@ -535,7 +535,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	((HashState *) innerPlanState(hjstate))->hashkeys = rclauses;
 
 	hjstate->hj_JoinState = HJ_BUILD_HASHTABLE;
-	hjstate->hj_MatchedOuter = false;
+	hjstate->hj_MachedOuter = false;
 	hjstate->hj_OuterNotEmpty = false;
 
 	return hjstate;
@@ -553,10 +553,10 @@ ExecEndHashJoin(HashJoinState *node)
 	/*
 	 * Free hash table
 	 */
-	if (node->hj_HashTable)
+	if (node->inner_hj_HashTable)
 	{
-		ExecHashTableDestroy(node->hj_HashTable);
-		node->hj_HashTable = NULL;
+		ExecHashTableDestroy(node->inner_hj_HashTable);
+		node->inner_hj_HashTable = NULL;
 	}
 
 	/*
@@ -569,7 +569,7 @@ ExecEndHashJoin(HashJoinState *node)
 	 */
 	ExecClearTuple(node->js.ps.ps_ResultTupleSlot);
 	ExecClearTuple(node->hj_OuterTupleSlot);
-	ExecClearTuple(node->hj_HashTupleSlot);
+	ExecClearTuple(node->hj_OuterTupleSlot);
 
 	/*
 	 * clean up subtrees
@@ -595,7 +595,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 						  HashJoinState *hjstate,
 						  uint32 *hashvalue)
 {
-	HashJoinTable hashtable = hjstate->hj_HashTable;
+	HashJoinTable hashtable = hjstate->inner_hj_HashTable;
 	int			curbatch = hashtable->curbatch;
 	TupleTableSlot *slot;
 
@@ -670,7 +670,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 static bool
 ExecHashJoinNewBatch(HashJoinState *hjstate)
 {
-	HashJoinTable hashtable = hjstate->hj_HashTable;
+	HashJoinTable hashtable = hjstate->inner_hj_HashTable;
 	int			nbatch;
 	int			curbatch;
 	BufFile    *innerFile;
@@ -772,7 +772,7 @@ ExecHashJoinNewBatch(HashJoinState *hjstate)
 		while ((slot = ExecHashJoinGetSavedTuple(hjstate,
 												 innerFile,
 												 &hashvalue,
-												 hjstate->hj_HashTupleSlot)))
+												 hjstate->hj_OuterTupleSlot)))
 		{
 			/*
 			 * NOTE: some tuples may be sent to future batches.  Also, it is
@@ -904,9 +904,9 @@ ExecReScanHashJoin(HashJoinState *node)
 	 * inner subnode, then we can just re-use the existing hash table without
 	 * rebuilding it.
 	 */
-	if (node->hj_HashTable != NULL)
+	if (node->inner_hj_HashTable != NULL)
 	{
-		if (node->hj_HashTable->nbatch == 1 &&
+		if (node->inner_hj_HashTable->nbatch == 1 &&
 			node->js.ps.righttree->chgParam == NULL)
 		{
 			/*
@@ -916,7 +916,7 @@ ExecReScanHashJoin(HashJoinState *node)
 			 * inner-tuple match flags contained in the table.
 			 */
 			if (HJ_FILL_INNER(node))
-				ExecHashTableResetMatchFlags(node->hj_HashTable);
+				ExecHashTableResetMatchFlags(node->inner_hj_HashTable);
 
 			/*
 			 * Also, we need to reset our state about the emptiness of the
@@ -935,8 +935,8 @@ ExecReScanHashJoin(HashJoinState *node)
 		else
 		{
 			/* must destroy and rebuild hash table */
-			ExecHashTableDestroy(node->hj_HashTable);
-			node->hj_HashTable = NULL;
+			ExecHashTableDestroy(node->inner_hj_HashTable);
+			node->inner_hj_HashTable = NULL;
 			node->hj_JoinState = HJ_BUILD_HASHTABLE;
 
 			/*
@@ -949,12 +949,12 @@ ExecReScanHashJoin(HashJoinState *node)
 	}
 
 	/* Always reset intra-tuple state */
-	node->hj_CurHashValue = 0;
-	node->hj_CurBucketNo = 0;
+	node->inner_inner_inner_hj_CurHashValue = 0;
+	node->outer_outer_hj_CurBucketNo = 0;
 	node->hj_CurSkewBucketNo = INVALID_SKEW_BUCKET_NO;
-	node->hj_CurTuple = NULL;
+	node->inner_hj_CurTuple = NULL;
 
-	node->hj_MatchedOuter = false;
+	node->hj_MachedOuter = false;
 	node->hj_FirstOuterTupleSlot = NULL;
 
 	/*

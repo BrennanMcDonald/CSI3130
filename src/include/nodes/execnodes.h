@@ -879,6 +879,7 @@ typedef struct PlanState
 	/*
 	 * Other run-time state needed by most if not all node types.
 	 */
+	TupleTableSlot *ps_ResultTupleSlot;
 	TupleTableSlot *ps_OuterTupleSlot; /* CSI3130 slot for current "outer" tuple*/
 	TupleTableSlot *ps_InnerTupleSlot; /* CSI3130 slot for current "inner" tuple*/
 	ExprContext *ps_ExprContext;	/* node's expression-evaluation context */
@@ -1708,7 +1709,7 @@ typedef struct HashJoinState
 	HashJoinTable outer_hj_HashTable;
 	uint32				inner_hj_CurHashValue;
 	uint32				outer_hj_CurHashValue;
-	int						inner_hj_CurHashValue;
+	//int						inner_hj_CurHashValue;
 	int						outer_hj_CurBucketNo;
 	HashJoinTuple inner_hj_CurTuple;
 	HashJoinTuple outer_hj_CurTuple;

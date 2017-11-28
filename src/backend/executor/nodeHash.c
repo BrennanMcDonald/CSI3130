@@ -59,6 +59,7 @@ static void *dense_alloc(HashJoinTable hashtable, Size size);
 static TupleTableSlot *
 ExecHash(PlanState *pstate)
 {
+	
 	elog(ERROR, "Hash node does not support ExecProcNode call convention");
 	return NULL;
 }

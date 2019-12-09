@@ -441,7 +441,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/brennan/CSI3130-Symmetric-Hash-Join'
+ac_pwd='/home/brennan/CSI3130'
 srcdir='.'
 INSTALL='/usr/bin/install -c'
 MKDIR_P='/usr/bin/mkdir -p'
@@ -1011,7 +1011,7 @@ D["USE_SYSV_SHARED_MEMORY"]=" 1"
 D["USE_DEV_URANDOM"]=" 1"
 D["HAVE_STRONG_RANDOM"]=" 1"
 D["MEMSET_LOOP_LIMIT"]=" 1024"
-D["PG_VERSION_STR"]=" \"PostgreSQL 11devel on x86_64-pc-linux-gnu, compiled by gcc (GCC) 7.2.0, 64-bit\""
+D["PG_VERSION_STR"]=" \"PostgreSQL 11devel on x86_64-pc-linux-gnu, compiled by gcc (GCC) 9.2.0, 64-bit\""
 D["PG_VERSION_NUM"]=" 110000"
   for (key in D) D_is_set[key] = 1
   FS = ""

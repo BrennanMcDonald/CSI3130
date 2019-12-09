@@ -4184,15 +4184,18 @@ create_hashjoin_plan(PlannerInfo *root,
 						  skewColumn,
 						  skewInherit);
 
-	outer_hash_plan = make_hash(outer_plan);
+	outer_hash_plan = make_hash(outer_plan,
+						  skewTable,
+						  skewColumn,
+						  skewInherit);
 
 
 	/*
 	 * Set Hash node's startup & total costs equal to total cost of input
 	 * plan; this only affects EXPLAIN display not decisions.
 	 */
-	copy_plan_costsize(&hash_plan->plan, inner_plan);
-	hash_plan->plan.startup_cost = hash_plan->plan.total_cost;
+	copy_plan_costsize(&inner_hash_plan->plan, inner_plan);
+	outer_hash_plan->plan.startup_cost = inner_hash_plan->plan.total_cost;
 
 	join_plan = make_hashjoin(tlist,
 							  joinclauses,

@@ -1707,10 +1707,14 @@ typedef struct HashJoinState
 	List 					*hashclauses;						//list of ExprState nodes
 	HashJoinTable inner_hj_HashTable;
 	HashJoinTable outer_hj_HashTable;
-	uint32				inner_hj_CurHashValue;
+	//uint32				inner_hj_CurHashValue;
 	uint32				outer_hj_CurHashValue;
-	//int						inner_hj_CurHashValue;
+	uint32				hj_JoinState;
+	int				hj_CurSkewBucketNo;
+	int				inner_inner_inner_hj_CurHashValue;
+	int						inner_hj_CurHashValue;
 	int						outer_hj_CurBucketNo;
+	int						outer_outer_hj_CurBucketNo;
 	HashJoinTuple inner_hj_CurTuple;
 	HashJoinTuple outer_hj_CurTuple;
 	List 					*hj_OuterHashKeys;			//list of ExprState nodes
